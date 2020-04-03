@@ -9,6 +9,7 @@ import com.monkey.springboot.demo.utils.RSAUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -25,8 +26,14 @@ import java.util.Map;
 import static com.monkey.springboot.demo.advice.EncodeResponseBodyAdvice.getRandomString;
 
 @Order(Ordered.LOWEST_PRECEDENCE - 1)
-@WebFilter(urlPatterns = {"/common/*"},filterName = "requestWrapperFilter")
+@WebFilter(urlPatterns = {"/testEncrypt"},filterName = "requestWrapperFilter")
 public class RequestWrapperFilter extends OncePerRequestFilter {
+    @Value("${server.private.key}")
+    private String SERVER_PRIVATE_KEY;
+    @Value("${client.public.key}")
+    private String CLIENT_PUBLIC_KEY;
+    @Value("${aes.private.key}")
+    private String AES_PRIVATE_KEY;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestWrapperFilter.class);
 
@@ -36,8 +43,8 @@ public class RequestWrapperFilter extends OncePerRequestFilter {
         ResponseWrapper responseWrapper = new ResponseWrapper(response);
         try {
             decodeReq(request,requestWrapper);
-            filterChain.doFilter(requestWrapper,responseWrapper);
             encodeRes(response,responseWrapper);
+            super.doFilter(requestWrapper,responseWrapper,filterChain);
         } catch (Exception e) {
             LOGGER.error("数据包装器执行出错....{}", e);
         }
@@ -56,13 +63,14 @@ public class RequestWrapperFilter extends OncePerRequestFilter {
         String data = requestMap.get("requestData");
         // 加密的ase秘钥
         String clientencrypted = requestMap.get("encrypted");
+
         if(StringUtils.isEmpty(data) || StringUtils.isEmpty(clientencrypted)){
             throw new RuntimeException("参数【requestData】缺失异常！");
         }else{
             String content = null;
             String aseKey = null;
             try {
-                aseKey = RSAUtils.decryptDataOnJava(clientencrypted,"SERVER_PRIVATE_KEY");
+                aseKey = RSAUtils.decryptDataOnJava(clientencrypted,SERVER_PRIVATE_KEY);
             }catch (Exception e){
                 throw  new RuntimeException("参数【aseKey】解析异常！");
             }
@@ -88,7 +96,7 @@ public class RequestWrapperFilter extends OncePerRequestFilter {
         // 生成aes秘钥
         String aseKey = getRandomString(16);
         // rsa加密
-        String serverencrypted = RSAUtils.encryptedDataOnJava(aseKey, "CLIENT_PUBLIC_KEY");
+        String serverencrypted = RSAUtils.encryptedDataOnJava(aseKey, CLIENT_PUBLIC_KEY);
         // aes加密
         String responseStrAes = AesEncryptUtils.encrypt(responseStr, aseKey);
         Map<String, String> map = new HashMap<>();

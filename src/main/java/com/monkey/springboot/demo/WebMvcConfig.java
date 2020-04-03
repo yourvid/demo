@@ -16,12 +16,21 @@ import java.util.List;
 @EnableWebMvc
 public class WebMvcConfig implements WebMvcConfigurer {
 
+//    @Bean
+//    public FilterRegistrationBean repeatedlyReadFilter() {
+//        FilterRegistrationBean registration = new FilterRegistrationBean();
+//        RepeatedlyReadFilter repeatedlyReadFilter = new RepeatedlyReadFilter();
+//        registration.setFilter(repeatedlyReadFilter);
+//        registration.addUrlPatterns("/*");
+//        return registration;
+//    }
+
     @Bean
-    public FilterRegistrationBean repeatedlyReadFilter() {
+    public FilterRegistrationBean requestWrapperFilter() {
         FilterRegistrationBean registration = new FilterRegistrationBean();
-        RepeatedlyReadFilter repeatedlyReadFilter = new RepeatedlyReadFilter();
-        registration.setFilter(repeatedlyReadFilter);
-        registration.addUrlPatterns("/*");
+        RequestWrapperFilter requestWrapperFilter = new RequestWrapperFilter();
+        registration.setFilter(requestWrapperFilter);
+        registration.addUrlPatterns("/testEncrypt");
         return registration;
     }
 
@@ -35,5 +44,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         argumentResolvers.add(new MyMethodArgumentResolver());
     }
 
-
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");
+    }
 }
